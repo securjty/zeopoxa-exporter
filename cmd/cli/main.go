@@ -24,11 +24,13 @@ func cmd() int {
 		timeout     time.Duration
 		timezone    string
 		showVersion bool
+		logLevelRaw string
 	)
 	flag.StringVar(&dsn, "d", "", "Path to zeopoxa backup sqlite file")
 	flag.StringVar(&dir, "o", "./exported_gpx", "Output dir for exported gpx files")
 	flag.DurationVar(&timeout, "t", 90*time.Second, "Timeout parse db")
 	flag.StringVar(&timezone, "z", "Europe/Moscow", "Timezone for parsing start track time")
+	flag.StringVar(&logLevelRaw, "l", "info", "Log level. Available values: error, info, warn, debug")
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 
 	flag.Parse()
@@ -37,6 +39,12 @@ func cmd() int {
 		fmt.Println(Version)
 		return 0
 	}
+
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(logLevelRaw)); err != nil {
+		level = slog.LevelInfo
+	}
+	slog.SetLogLoggerLevel(level)
 
 	if dsn == "" {
 		slog.Error("empty database path")
@@ -72,18 +80,21 @@ func cmd() int {
 		slog.Error("ping database", slog.Any("err", err))
 		return -1
 	}
-
+	slog.Info("parsing tracks from zeopoxa database")
 	data, err := ze.Parse(ctx, db, zone)
 	if err != nil {
 		slog.Error("parse", slog.Any("err", err))
 		return -1
 	}
+	slog.Info("parsing was successful")
 
+	slog.Info("export to gpx files", slog.String("directory", dir))
 	err = ze.Export(dir, data)
 	if err != nil {
 		slog.Error("export", slog.Any("err", err))
 		return -1
 	}
+	slog.Info("done")
 
 	return 0
 }

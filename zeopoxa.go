@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -34,6 +35,7 @@ func Parse(ctx context.Context, db *sql.DB, timezone *time.Location) ([]ZeopoxaT
 		BATCH_SIZE = 500
 	)
 	output := make([]ZeopoxaTrack, 0)
+	totalCount := 0
 
 	query := fmt.Sprintf(`SELECT
 		mt.id, 
@@ -50,7 +52,9 @@ func Parse(ctx context.Context, db *sql.DB, timezone *time.Location) ([]ZeopoxaT
 	FROM main_table mt
 	LIMIT %d OFFSET ?;
 	`, BATCH_SIZE)
+
 	for offset := 0; ; offset += BATCH_SIZE {
+		slog.Debug("fetch tracks", slog.Int("limit", BATCH_SIZE), slog.Int("offset", offset))
 		count := 0
 
 		rows, err := db.QueryContext(ctx, query, offset)
@@ -70,16 +74,21 @@ func Parse(ctx context.Context, db *sql.DB, timezone *time.Location) ([]ZeopoxaT
 
 		_ = rows.Close()
 
+		totalCount += count
+
 		if count < BATCH_SIZE {
 			break
 		}
 	}
+
+	slog.Info("tracks processed", slog.Int("count", totalCount))
 
 	return output, nil
 }
 
 func parseRow(rows *sql.Rows, timezone *time.Location) (*ZeopoxaTrack, error) {
 	const op = "parseRow"
+
 	var (
 		track             ZeopoxaTrack
 		start             string
@@ -163,6 +172,14 @@ func parseRow(rows *sql.Rows, timezone *time.Location) (*ZeopoxaTrack, error) {
 
 		track.Points = append(track.Points, p)
 	}
+
+	slog.Debug(
+		"track processed successfully",
+		slog.Int64("id", track.Id),
+		slog.Time("started", track.StartTime),
+		slog.Duration("duration", track.Duration),
+		slog.Int("points_count", totalPoints),
+	)
 
 	return &track, nil
 }
