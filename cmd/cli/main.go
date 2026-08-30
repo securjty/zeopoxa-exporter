@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	_ "time/tzdata"
+
 	ze "github.com/securjty/zeopoxa-exporter"
 )
 
