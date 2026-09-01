@@ -24,6 +24,8 @@ func Export(dir string, data []ZeopoxaTrack) error {
 		VERSION            = "1.1"
 		XMLNS_XSI          = "http://www.w3.org/2001/XMLSchema-instance"
 		XSI_SCHEMALOCATION = "http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd"
+
+		EXPORT_ACTIVITY_TYPE = "cycling"
 	)
 
 	for _, item := range data {
@@ -67,7 +69,7 @@ func Export(dir string, data []ZeopoxaTrack) error {
 
 		track := gpx.GPXTrack{
 			Name: "Zeopoxa Track",
-			Type: "CYCLING",
+			Type: EXPORT_ACTIVITY_TYPE,
 			Segments: []gpx.GPXTrackSegment{
 				{
 					Points: points,
